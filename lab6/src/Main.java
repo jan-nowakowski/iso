@@ -1,4 +1,4 @@
-package lab5.src;
+package lab6.src;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -14,57 +14,7 @@ public class Main {
         try {
             Instance instance = new Instance(filepath);
             Solver solver = new Solver(instance);
-            long timeLimitMs = 2000;
-
-            System.out.println("=========================================================================");
-            System.out.println("🚀 ROZPOCZYNAMY REALIZACJĘ ZADANIA 5: TESTY GLOBALNEJ WYPUKŁOŚCI");
-            System.out.println("=========================================================================");
-
-            System.out.println("⏳ 1. Wyznaczanie bardzo dobrego rozwiązania referencyjnego przy użyciu ILS...");
-            Solution bestKnownSolution = solver.solveILS(5000);
-            System.out.println("   [OK] Referencyjna funkcja celu: " + bestKnownSolution.getObjectiveValue());
-
-            System.out.println("⏳ 2. Generowanie 1000 losowych optimów lokalnych...");
-            List<Solution> localOptima = new ArrayList<>();
-            for (int i = 0; i < 1000; i++) {
-                Solution startRandom = solver.randomSolution();
-                Solution localOpt = solver.localSearchCandidateMoves(startRandom);
-                localOptima.add(localOpt);
-                if ((i + 1) % 200 == 0) System.out.print((i + 1) + "... ");
-            }
-            System.out.println("\n   [OK] Wygenerowano całą populację.");
-
-            System.out.println("⏳ 3. Obliczanie miar podobieństwa i zapis danych do FDC...");
-            File directory = new File("lab5/wyniki");
-            if (!directory.exists()) directory.mkdirs();
-
-            try (PrintWriter out = new PrintWriter("lab5/wyniki/wykresy_sciezek/wypuklosc_dane.csv")) {
-                out.println("cost;sim_best_nodes;sim_best_edges;sim_nodes_avg;sim_edges_avg");
-
-                for (int i = 0; i < 1000; i++) {
-                    Solution optI = localOptima.get(i);
-                    int fCelu = optI.getObjectiveValue();
-
-                    int simBestNodes = optI.getCommonNodes(bestKnownSolution);
-                    int simBestEdges = optI.getCommonEdges(bestKnownSolution);
-
-                    long totalSimNodes = 0;
-                    long totalSimEdges = 0;
-                    for (int j = 0; j < 1000; j++) {
-                        if (i == j) continue;
-                        Solution optJ = localOptima.get(j);
-                        totalSimNodes += optI.getCommonNodes(optJ);
-                        totalSimEdges += optI.getCommonEdges(optJ);
-                    }
-
-                    double simAvgNodes = totalSimNodes / 999.0;
-                    double simAvgEdges = totalSimEdges / 999.0;
-
-                    out.printf(java.util.Locale.US, "%d;%d;%d;%.4f;%.4f\n",
-                            fCelu, simBestNodes, simBestEdges, simAvgNodes, simAvgEdges);
-                }
-            }
-            System.out.println("   [OK] Zapisano plik: lab5/wyniki/wypuklosc_dane.csv");
+            long timeLimitMs = 1500;
 
 
             System.out.println("\n=========================================================================");
@@ -77,7 +27,6 @@ public class Main {
             // Mapa do zapisywania najlepszych znalezionych ścieżek
             Map<String, List<Integer>> bestPaths = new LinkedHashMap<>();
 
-            runExperiment("Heurystyka Zachlanna", numRuns, () -> solver.solveGreedyHeuristic(), solver, bestPaths);
             runExperiment("Bazowe Lokalne Przeszk.", numRuns, () -> solver.solveBaseLocalSearch(), solver, bestPaths);
 
             runExperiment("MSLS", numRuns, () -> solver.solveMSLS(timeLimitMs), solver, bestPaths);
@@ -86,14 +35,16 @@ public class Main {
 
             runExperiment("HAE (Op1 + LS)", numRuns, () -> solver.solveHAE(timeLimitMs, 1, true), solver, bestPaths);
             runExperiment("HAE (Op2 + LS)", numRuns, () -> solver.solveHAE(timeLimitMs, 2, true), solver, bestPaths);
-            runExperiment("HAE (Op2 bez LS)", numRuns, () -> solver.solveHAE(timeLimitMs, 2, false), solver, bestPaths);
-            runExperiment("HAE (Op3 + LS)", numRuns, () -> solver.solveHAE(timeLimitMs, 3, true), solver, bestPaths);
-            runExperiment("HAE (Op3 bez LS)", numRuns, () -> solver.solveHAE(timeLimitMs, 3, false), solver, bestPaths);
+            //runExperiment("HAE (Op2 bez LS)", numRuns, () -> solver.solveHAE(timeLimitMs, 2, false), solver, bestPaths);
+            //runExperiment("HAE (Op3 + LS)", numRuns, () -> solver.solveHAE(timeLimitMs, 3, true), solver, bestPaths);
+            //runExperiment("HAE (Op3 bez LS)", numRuns, () -> solver.solveHAE(timeLimitMs, 3, false), solver, bestPaths);
 
+            // ---> DODAJ TĘ LINIKĘ <---
+            runExperiment("Q-ALNS (RL, Zad 7)", numRuns, () -> solver.solveQALNS(timeLimitMs), solver, bestPaths);
             System.out.println("=========================================================================");
 
             // ZAPIS ŚCIEŻEK DO PLIKU
-            try (PrintWriter out = new PrintWriter("lab5/wyniki/najlepsze_sciezki.txt")) {
+            try (PrintWriter out = new PrintWriter("lab6/wyniki/najlepsze_sciezki.txt")) {
                 for (Map.Entry<String, List<Integer>> entry : bestPaths.entrySet()) {
                     out.print(entry.getKey() + ";");
                     List<Integer> path = entry.getValue();
@@ -103,7 +54,7 @@ public class Main {
                     out.println();
                 }
             }
-            System.out.println("✅ Pomyślnie zapisano plik z trasami: lab5/wyniki/najlepsze_sciezki.txt");
+            System.out.println("✅ Pomyślnie zapisano plik z trasami: lab6/wyniki/najlepsze_sciezki.txt");
 
         } catch (Exception e) {
             System.err.println("❌ Wystąpił błąd krytyczny: " + e.getMessage());
